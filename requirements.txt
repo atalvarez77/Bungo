@@ -1,0 +1,4 @@
+sudachipy
+sudachidict_core
+PyQt6
+pykakasi

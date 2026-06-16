@@ -1,0 +1,29 @@
+@cwd /usr/pkg
+@name kanjidic2-20061208
+@blddep digest-20220214
+@blddep mktools-20250213
+@blddep cwrappers-20220403
+@comment $NetBSD: PLIST,v 1.2 2009/06/14 18:07:23 joerg Exp $
+share/doc/kanjidic2/kanjidic2_ov.html
+@comment MD5:7f976ed07bd5cd2309c570f43d927c2b
+share/doc/kanjidic2/kanjidic_doc.html
+@comment MD5:6dbb25305665deb2608ee0dd23588bb0
+share/kanjidic2/kanjidic2.dtd
+@comment MD5:259125274a81357153be80dac8b2f943
+share/kanjidic2/kanjidic2.xml
+@comment MD5:b371076ab933d54fe4967936d953fec9
+share/kanjidic2/kanjidic2.xsd
+@comment MD5:ac903e9e0803761db618a278835c7314
+@cwd /usr/pkg
+@ignore
++COMMENT
+@ignore
++DESC
+@ignore
++BUILD_VERSION
+@ignore
++BUILD_INFO
+@ignore
++SIZE_PKG
+@ignore
++SIZE_ALL
