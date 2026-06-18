@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/Users/a2macpro/Desktop/Coding Projects/Bungo/venv"
+VIRTUAL_ENV="/Users/a2macpro/Desktop/Coding Projects/08 | Bungo/venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

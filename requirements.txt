@@ -2,3 +2,5 @@ sudachipy
 sudachidict_core
 PyQt6
 pykakasi
+romkan
+pyinstaller
