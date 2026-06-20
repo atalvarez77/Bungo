@@ -22,6 +22,7 @@ class DictionaryService:
         Sudachi POS tags, and global sentence context to return ONE best definition.
         """
         conn = sqlite3.connect(self.db_path)
+        rule_engine = GrammarRuleEngine()
         cursor = conn.cursor()
         
         # We now fetch e.kana to filter out wrong Kanji readings!
@@ -67,27 +68,25 @@ class DictionaryService:
                 score += 20
             elif (sudachi_primary == '代名詞' or sudachi_secondary == '代名詞') and 'pn' in s_pos_str:
                 score += 20
-            elif sudachi_primary == '名詞' and 'n' in s_pos_str: # <--- FIXED: Allow suru-verbs to act as nouns!
+            elif sudachi_primary == '名詞' and 'n' in s_pos_str: 
                 score += 20
             elif sudachi_primary == '形容詞' and 'adj' in s_pos_str:
                 score += 20
             elif sudachi_primary == '副詞' and 'adv' in s_pos_str:
                 score += 20
 
-            # --- Collocation / Look-Behind Bonus ---
-            # If the definition explicitly mentions a Japanese word or English concept 
-            # found elsewhere in the sentence, give it a massive contextual bonus!
-            
-            # (Requires passing the raw token surfaces into sentence_context beforehand)
+            # --- Dynamic Collocation / Look-Behind Bonus ---
             sentence_words = sentence_context.get('surface_words', [])
             
-            # e.g., if "電話" is in the sentence, and the definition has "phone" or "telephone"
-            if '電話' in sentence_words and ('phone' in definitions.lower() or 'telephone' in definitions.lower()):
-                score += 50
-                
-            # e.g., if "時間" is in the sentence, and the definition has "time"
-            if '時間' in sentence_words and ('time' in definitions.lower() or 'accurate' in definitions.lower()):
-                score += 50
+            # Get the collocation rules for the CURRENT word we are searching (e.g., 'かける')
+            collocation_rules = rule_engine.collocation_map.get(word, {})
+            
+            # Loop through the rules (e.g., check if '電話' or '眼鏡' is in the sentence)
+            for context_noun, english_keywords in collocation_rules.items():
+                if context_noun in sentence_words:
+                    # If the noun is in the sentence, check if the JMdict definition has our target keywords
+                    if any(keyword in definitions.lower() for keyword in english_keywords):
+                        score += 50
                 
             # --- 3. Environmental Context Matching ---
             if sentence_context.get('polarity') == 'negative':
@@ -203,7 +202,7 @@ class BungoEngine:
                 if base in ['です', 'ます'] or 'ません' in token.surface():
                     sentence_context['politeness'] = 'polite'
 
-            # --- Pass 2 & 3: Definition and Rule Loop ---
+            # --- Pass 2: Definition and Rule Loop ---
             skip_count = 0
             for i, token in enumerate(tokens):
                 # If a previous rule absorbed this token, skip it entirely!

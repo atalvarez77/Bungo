@@ -34,7 +34,102 @@ class GrammarRuleEngine:
             '！': "Exclamation Mark: Indicates exclamation or strong emotion.",
             '〜': "Tilde: Indicates a range or approximation.",
             '…': "Ellipsis: Indicates an ellipsis, showing omission or trailing off."
+        }
 
+        # Maps polysemous base verbs to their context nouns and the specific 
+        # English dictionary keywords required to score a perfect contextual match.
+        self.collocation_map = {
+            
+            # --- かける (Kakeru) : The Ultimate Troublemaker (30+ meanings) ---
+            'かける': {
+                '電話': ['phone', 'telephone', 'call'],
+                '眼鏡': ['glasses', 'wear', 'put on'],
+                'めがね': ['glasses', 'wear', 'put on'],
+                '迷惑': ['trouble', 'annoy', 'bother', 'burden'],
+                '手間': ['time', 'effort', 'trouble'],
+                '時間': ['spend', 'expend', 'take'],
+                'お金': ['spend', 'cost'],
+                '声': ['call out', 'greet', 'speak to'],
+                '音楽': ['play', 'broadcast', 'music'],
+                '曲': ['play', 'broadcast', 'music'],
+                'エンジン': ['start', 'turn on', 'engine'],
+                '鍵': ['lock'],
+                'アイロン': ['iron']
+            },
+            
+            # --- 引く (Hiku) : To pull, draw, catch, or play? ---
+            '引く': {
+                '風邪': ['cold', 'catch'],
+                '辞書': ['dictionary', 'look up', 'consult'],
+                '辞典': ['dictionary', 'look up', 'consult'],
+                'ピアノ': ['play', 'piano'],
+                'ギター': ['play', 'guitar'],
+                '線': ['draw', 'line'],
+                '気': ['attract', 'catch', 'draw'],
+                '血': ['inherit', 'blood']
+            },
+
+            # --- とる (Toru) : To take, age, or steal? ---
+            'とる': {
+                '写真': ['take', 'photograph', 'picture'],
+                'ビデオ': ['record', 'film', 'shoot'],
+                '年': ['grow old', 'age', 'years'],
+                '授業': ['take', 'class', 'course'],
+                '休み': ['take', 'holiday', 'break', 'rest'],
+                '睡眠': ['get', 'sleep'],
+                'バランス': ['strike', 'keep', 'achieve', 'balance'],
+                '責任': ['take', 'assume', 'bear']
+            },
+
+            # --- つく (Tsuku) : To attach, ignite, or lie? ---
+            'つく': {
+                '嘘': ['tell', 'lie'],
+                'うそ': ['tell', 'lie'],
+                '気': ['notice', 'realize', 'aware'],
+                '火': ['catch fire', 'ignite'],
+                '電源': ['turn on', 'power'],
+                '席': ['take', 'sit', 'seat'],
+                'ため息': ['breathe', 'sigh']
+            },
+
+            # --- 合う (Au) : To meet, match, or be accurate? ---
+            '合う': {
+                '時間': ['time', 'accurate', 'correct'],
+                '時計': ['time', 'accurate', 'correct'],
+                '目': ['eyes', 'meet', 'notice'],
+                '気': ['get along', 'mesh', 'click'],
+                'サイズ': ['fit', 'match'],
+                '服': ['fit', 'suit', 'match']
+            },
+
+            # --- する (Suru) : Sensory/Perception Overrides ---
+            # Sudachi often tokenizes this purely as 'to do', but with sensory nouns, it means 'to perceive'.
+            'する': {
+                '匂い': ['smell'],
+                'におい': ['smell'],
+                '香り': ['scent', 'smell'],
+                '音': ['hear', 'sound'],
+                '声': ['hear', 'voice'],
+                '味': ['taste'],
+                '気': ['feel', 'hunch', 'sensation']
+            },
+
+            # --- 切る (Kiru) : To cut, or to terminate? ---
+            '切る': {
+                '電話': ['hang up', 'cut off'],
+                '電源': ['turn off', 'power'],
+                'スイッチ': ['turn off'],
+                '期限': ['expire', 'deadline', 'pass']
+            },
+
+            # --- さす (Sasu) : To point, open, or sting? ---
+            'さす': {
+                '傘': ['umbrella', 'hold up', 'open'],
+                '指': ['point'],
+                '虫': ['sting', 'bite'],
+                '蜂': ['sting', 'bite'],
+                '光': ['shine', 'strike', 'light']
+            }
         }
 
     # ==========================================
