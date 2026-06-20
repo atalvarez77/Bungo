@@ -18,7 +18,6 @@ if getattr(sys, 'frozen', False):
 base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# --- IMPORT THE BACKEND ---
 try:
     from engine import BungoEngine
 except ImportError:
@@ -95,6 +94,34 @@ GLOBAL_STYLE = f"""
     QListWidget::item {{ padding: 10px; border-bottom: 1px solid #333; }}
     QListWidget::item:hover {{ background-color: #333; }}
 """
+
+def format_definition_to_html(raw_definition):
+    if not raw_definition or raw_definition == "Definition not found.":
+        return "<span style='color: #8A8A8E; font-style: italic;'>Definition not found.</span>"
+
+    senses = [sense.strip() for sense in raw_definition.split('|')]
+    formatted_senses = []
+    
+    for i, sense in enumerate(senses):
+        # Format Context Badges [...] -> Accent Color, Bold
+        sense = re.sub(
+            r'\[(.*?)\]', 
+            f'<span style="color: {ACCENT_COLOR}; font-weight: bold; font-size: 13px;">[\\1]</span>', 
+            sense
+        )
+        # Format Nuance Notes (...) -> Gray, Italic
+        sense = re.sub(
+            r'\((.*?)\)', 
+            r'<span style="color: #8A8A8E; font-style: italic;">(\1)</span>', 
+            sense
+        )
+        # Number list if multiple definitions exist
+        if len(senses) > 1:
+            formatted_senses.append(f"<span style='color: #8A8A8E; font-weight: bold;'>{i+1}.</span> {sense}")
+        else:
+            formatted_senses.append(sense)
+
+    return "<br><br>".join(formatted_senses)
 
 class CenteredFlowLayout(QLayout):
     def __init__(self, parent=None, margin=0, spacing=10):
@@ -308,7 +335,6 @@ class ParseScreen(QWidget):
         self.main_layout.addSpacing(10)
         self.main_layout.addWidget(blocks_container)
         
-        # --- INFO POPUP UPGRADE ---
         self.info_panel = QFrame()
         self.info_panel.setObjectName("InfoPopup")
         self.info_layout = QVBoxLayout(self.info_panel)
@@ -400,15 +426,34 @@ class ParseScreen(QWidget):
             
             if is_punct:
                 literal_parts.append(word)
-            elif is_grammar:
-                short_def = full_def.split(':')[0].split('(')[0].strip()
-                literal_parts.append(f"({short_def})")
             else:
-                short_def = full_def.split(';')[0].strip()
-                literal_parts.append(short_def.capitalize())
+                # 1. Isolate ONLY the first definition before the '|' separator
+                first_sense = full_def.split('|')[0].strip()
+                
+                if is_grammar:
+                    # Look for our new [...] context badges first
+                    match = re.match(r'\[(.*?)\]', first_sense)
+                    if match:
+                        # Extract text inside brackets, removing extra info like "(Casual)"
+                        short_def = match.group(1).split('(')[0].strip()
+                    else:
+                        # Fallback for old colon-based rules (e.g., "Topic marker: ...")
+                        short_def = first_sense.split(':')[0].split('(')[0].strip()
+                        
+                    literal_parts.append(f"({short_def})")
+                else:
+                    # For normal words, use Regex to strip out all [...] and (...) context notes
+                    clean_def = re.sub(r'\[.*?\]', '', first_sense)
+                    clean_def = re.sub(r'\(.*?\)', '', clean_def)
+                    
+                    # Take only the very first English word/phrase before a comma
+                    short_def = clean_def.split(',')[0].strip()
+                    literal_parts.append(short_def.capitalize())
 
+        # Combine into the final literal sentence string
         raw_literal = " ".join(literal_parts)
         raw_literal = re.sub(r'\s+([。、！？.!,?])', r'\1', raw_literal)
+        raw_literal = re.sub(r"\s+'s", "'s", raw_literal) 
         self.lbl_literal.setText(f'"{raw_literal}"')
 
     def toggle_info_popup(self, data, color):
@@ -431,10 +476,13 @@ class ParseScreen(QWidget):
         if any(p in pos_list for p in ['記号', '補助記号']):
             self.lbl_info_def.setText("Punctuation")
         else:
-            self.lbl_info_def.setText(data['definition'])
+            raw_def = data['definition']
+            rich_def = format_definition_to_html(raw_def)
+            
+            self.lbl_info_def.setTextFormat(Qt.TextFormat.RichText)
+            self.lbl_info_def.setText(rich_def)
             
         # --- DYNAMIC KANJI BREAKDOWN ---
-        # Clear previous kanji rows
         for i in reversed(range(self.kanji_layout.count())):
             self.kanji_layout.itemAt(i).widget().setParent(None)
             

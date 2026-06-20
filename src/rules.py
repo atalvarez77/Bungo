@@ -31,7 +31,7 @@ class GrammarRuleEngine:
             '—': "Em Dash: Indicates a break in thought or a pause.",
             '―': "Horizontal Bar: Similar to '—', used for emphasis or interruption.",
             '?': "Question Mark: Indicates a question.",
-            '!': "Exclamation Mark: Indicates exclamation or strong emotion.",
+            '！': "Exclamation Mark: Indicates exclamation or strong emotion.",
             '〜': "Tilde: Indicates a range or approximation.",
             '…': "Ellipsis: Indicates an ellipsis, showing omission or trailing off."
 
@@ -70,6 +70,68 @@ class GrammarRuleEngine:
         # Return None so engine.py knows to fallback to JMdict.
         return None
 
+    def get_te_form_explanation(self, token, context):
+        """
+        Determines the semantic meaning of the て/で form by looking ahead.
+        RETURNS: (definition_string, tokens_to_skip)
+        """
+        tokens = context['tokens']
+        i = context['index']
+        
+        # Ensure we don't go out of bounds
+        if i + 1 < len(tokens):
+            next_token = tokens[i+1]
+            next_base = next_token.dictionary_form()
+            
+            # 1. The Progressive/State Operator
+            if next_base in ['いる', '居る', 'います', 'いた']:
+                return "[Continuous / State of Being] Indicates an ongoing action or current state.", 1
+                
+            # 2. The Preparatory Operator
+            elif next_base in ['おく', '置く', 'おきます', 'おいた']:
+                return "[Preparatory Action] Action done in advance for future readiness.", 1
+                
+            # 3. The Regret/Completion Operator
+            elif next_base in ['しまう', '仕舞う', 'ちゃう', 'しまった']:
+                return "[Regret / Completion] Completed action, often with a sense of regret or finality.", 1
+                
+            # 4. The Trial Operator
+            elif next_base in ['みる', '見る', 'みます', 'みた']:
+                return "[Trial Action] Trying something out to see what happens.", 1
+                
+            # 5. The Benefactive Operators
+            elif next_base in ['あげる', 'くれる', 'もらう', '頂く']:
+                return "[Benefactive Favor] Action done as a favor for someone.", 1
+
+        # Default: If it's followed by a comma, noun, or normal verb, consume nothing!
+        return "[Conjunction] 'And then' / Connects clauses or sequential actions.", 0
+    
+    def get_casual_contraction_explanation(self, token):
+        """
+        Intercepts conversational sound contractions (sound squishing) 
+        and maps them back to their formal grammatical meanings.
+        """
+        base = token.dictionary_form()
+        
+        # 1. Regret / Completion (てしまう -> ちゃう)
+        if base in ['ちゃう', 'じゃう']:
+            return "[Regret / Completion (Casual)] Contraction of てしまう/でしまう. Indicates a completed action, often with regret."
+            
+        # 2. Preparatory Action (ておく -> とく)
+        elif base in ['とく', 'どく']:
+            return "[Preparatory Action (Casual)] Contraction of ておく/でおく. Action done in advance for future readiness."
+            
+        # 3. Continuous / State (ている -> てる)
+        # Note: Sudachi sometimes tags てる as its own word in very casual parsing modes
+        elif base in ['てる', 'でる']:
+            return "[Continuous / State (Casual)] Contraction of ている/でいる. Indicates an ongoing action or current state."
+
+        # 4. Obligation / "Must Do" (なくては -> なくちゃ)
+        elif base in ['なくちゃ', 'なきゃ']:
+            return "[Obligation (Casual)] Contraction of なくては / なければ. Means 'must do' or 'have to do'."
+            
+        return None
+    
     def get_romaji_override(self, token, context):
         """
         Determines if a particle requires a non-standard romaji reading based on context.
@@ -101,6 +163,43 @@ class GrammarRuleEngine:
             'です': "Polite Copula, state of being",
             'う': "Volitional suffix (Let's do / Probably)"
         }
+
+        # Major Auxilary Check
+        # 1. Passive / Potential / Respect (れる / られる)
+        if base_form in ['れる', 'られる']:
+            tokens = context['tokens']
+            current_index = context['index']
+            
+            # --- CONTEXT SCANNER ---
+            # Look backwards up to 5 tokens to find strong particle clues in the clause
+            for j in range(current_index - 1, max(-1, current_index - 6), -1):
+                prev_token = tokens[j]
+                prev_base = prev_token.dictionary_form()
+                prev_pos = prev_token.part_of_speech()
+                
+                # If we hit a punctuation mark, stop scanning (we've left the clause)
+                if prev_base in ['。', '、', '！', '？']:
+                    break
+                    
+                if '助詞' in prev_pos:
+                    if prev_base == 'に':
+                        return "[Passive] Indicates the action is done TO the subject (marked by 'ni')."
+                    elif prev_base == 'が':
+                        return "[Potential] Indicates the ABILITY to perform the action."
+            # Fallback
+            return "[Passive / Potential] Can indicate the action is done TO the subject (Passive), the subject has the ABILITY to do it (Potential), or formal respect." 
+        # 2. Causative (せる / させる)
+        elif base_form in ['せる', 'させる']:
+            return "[Causative] Indicates making, forcing, or allowing someone to do an action." 
+        # 3. Desire (たい / たがる)
+        elif base_form in ['たい', 'たがる']:
+            return "[Desire] Expresses the speaker's want or desire to perform the action."
+        # 4. Appearance / Hearsay (そうだ / そうです)
+        elif base_form in ['そうだ', 'そうです', 'そう']:
+            return "[Appearance / Hearsay] Indicates that something 'looks like' or 'is said to be' a certain way."
+        # 5. Formal Negation (ぬ / ず)
+        elif base_form in ['ぬ', 'ず']:
+            return "[Negative (Formal)] Classical/Written form of 'nai'. Indicates negation."
         
         # Check for base_form definition, then fallback to surface_form if not found
         aux_explanation = aux_math.get(base_form)

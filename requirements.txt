@@ -4,3 +4,4 @@ PyQt6
 pykakasi
 romkan
 pyinstaller
+lxml
