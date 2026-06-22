@@ -6,7 +6,8 @@ kakasi_data = collect_data_files('pykakasi')
 
 # 2. Tell PyInstaller exactly where our new Bungo database is
 app_data = [
-    ('data/bungo_dictionary.db', 'data')
+    ('data/bungo_dictionary.db', 'data'),
+    ('data/rules_dictionary.json', 'data')
 ]
 
 # Combine the data arrays
@@ -37,7 +38,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False, # <--- Set to True ONLY if you want to see the terminal for debugging
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

@@ -4,6 +4,7 @@ from sudachipy import dictionary, tokenizer
 import pykakasi
 import sqlite3
 import os
+import re
 
 from rules import GrammarRuleEngine
 
@@ -16,98 +17,119 @@ class DictionaryService:
             
         self.db_path = os.path.join(base_path, 'data', 'bungo_dictionary.db')
 
-    def get_contextual_definition(self, word, base_kana, pos_tags, sentence_context):
+    def get_contextual_definition(self, word, base_kana, pos_tags, context_dict):
         """
-        Fetches all senses for a word and scores them based on phonetic matching, 
-        Sudachi POS tags, and global sentence context to return ONE best definition.
+        Fetches all senses for a word, scores them, and ensures ALL definitions 
+        are returned (joined by ' | ') so the UI can list them in the popup.
         """
         conn = sqlite3.connect(self.db_path)
+        rule_engine = GrammarRuleEngine()
         cursor = conn.cursor()
         
-        # We now fetch e.kana to filter out wrong Kanji readings!
-        query = """
-        SELECT e.kana, s.pos, s.sense_info, GROUP_CONCAT(g.gloss, ', ') as definitions
-        FROM entries e
-        JOIN senses s ON e.id = s.entry_id
-        JOIN glosses g ON s.id = g.sense_id
-        WHERE e.kanji = ? OR e.kana = ?
-        GROUP BY s.id
-        """
-        cursor.execute(query, (word, word))
+        has_kanji = bool(re.search(r'[\u4E00-\u9FFF]', word))
+        
+        if has_kanji:
+            query = """
+            SELECT e.kana, s.pos, s.sense_info, GROUP_CONCAT(g.gloss, ', ') as sense_glosses
+            FROM entries e
+            JOIN senses s ON e.id = s.entry_id
+            JOIN glosses g ON s.id = g.sense_id
+            WHERE e.kanji = ?
+            GROUP BY s.id
+            """
+            cursor.execute(query, (word,))
+        else:
+            query = """
+            SELECT e.kana, s.pos, s.sense_info, GROUP_CONCAT(g.gloss, ', ') as sense_glosses
+            FROM entries e
+            JOIN senses s ON e.id = s.entry_id
+            JOIN glosses g ON s.id = g.sense_id
+            WHERE e.kana = ?
+            GROUP BY s.id
+            """
+            cursor.execute(query, (word,))
+
         rows = cursor.fetchall()
         conn.close()
 
-        if not rows:
+        # --- 1. BI-DIRECTIONAL SCANNER (Find Collocations) ---
+        current_idx = context_dict.get('index', 0)
+        env = context_dict.get('environment', {})
+        surface_words = env.get('surface_words', [])
+        
+        local_context_words = []
+        
+        # Look BEHIND
+        for j in range(current_idx - 1, max(-1, current_idx - 7), -1):
+            if j < 0 or j >= len(surface_words): break 
+            local_context_words.append(surface_words[j])
+            if surface_words[j] in ['。', '、', '！', '？', '「', '」']: break
+            
+        # Look AHEAD
+        for j in range(current_idx + 1, min(len(surface_words), current_idx + 7)):
+            local_context_words.append(surface_words[j])
+            if surface_words[j] in ['。', '、', '！', '？', '「', '」']: break
+
+        collocation_rules = rule_engine.collocation_map.get(word, {})
+        injected_idiom = None
+        
+        for context_noun, english_keywords in collocation_rules.items():
+            if context_noun in local_context_words: 
+                # Save the idiom so we can put it at the top of the list!
+                injected_idiom = f"[Contextual Meaning] {english_keywords[0].capitalize()}"
+                break
+
+        # If no DB rows AND no idiom, fail out gracefully
+        if not rows and not injected_idiom:
             return None
 
-        # Extract Sudachi POS hierarchy
+        # --- 2. SCORING DB DEFINITIONS ---
         sudachi_primary = pos_tags[0] if len(pos_tags) > 0 else ""
         sudachi_secondary = pos_tags[1] if len(pos_tags) > 1 else ""
+        sentence_polarity = env.get('polarity', 'positive')
+        scored_senses = []
 
-        best_score = -999
-        best_def = rows[0][3] # Fallback to the first definition if nothing scores well
-
-        for index, (db_kana, s_pos, s_inf, definitions) in enumerate(rows):
+        for index, (db_kana, s_pos, s_inf, sense_glosses) in enumerate(rows):
             score = 0
             s_pos_str = s_pos or ""
             s_inf_str = s_inf or ""
-            score -= (index * 0.1) # Slightly demote lower-ranked senses to prefer top results, but not too heavily
+            score -= (index * 0.1) 
             
-            
-            # --- 1. Phonetic Matching ---
-            # Solves the "彼" (kare vs are) issue. If the dictionary kana doesn't match our target, heavily penalize it.
-            if base_kana and db_kana and base_kana != db_kana:
-                score -= 50
-            else:
-                score += 10 # Matches the phonetic reading!
+            # Phonetic Matching
+            if base_kana and db_kana and base_kana != db_kana: score -= 50
+            else: score += 10
 
-            # --- 2. POS Tag Matching ---
-            # Cross-referencing Sudachi output with JMdict XML tags
-            if sudachi_primary == '動詞' and 'v' in s_pos_str and 'adv' not in s_pos_str:
-                score += 20
-            elif (sudachi_primary == '代名詞' or sudachi_secondary == '代名詞') and 'pn' in s_pos_str:
-                score += 20
-            elif sudachi_primary == '名詞' and 'n' in s_pos_str: # <--- FIXED: Allow suru-verbs to act as nouns!
-                score += 20
-            elif sudachi_primary == '形容詞' and 'adj' in s_pos_str:
-                score += 20
-            elif sudachi_primary == '副詞' and 'adv' in s_pos_str:
-                score += 20
+            # POS Tag Matching
+            if sudachi_primary == '動詞' and 'v' in s_pos_str and 'adv' not in s_pos_str: score += 20
+            elif (sudachi_primary == '代名詞' or sudachi_secondary == '代名詞') and 'pn' in s_pos_str: score += 20
+            elif sudachi_primary == '名詞' and 'n' in s_pos_str: score += 20
+            elif sudachi_primary == '形容詞' and 'adj' in s_pos_str: score += 20
+            elif sudachi_primary == '副詞' and 'adv' in s_pos_str: score += 20
 
-            # --- Collocation / Look-Behind Bonus ---
-            # If the definition explicitly mentions a Japanese word or English concept 
-            # found elsewhere in the sentence, give it a massive contextual bonus!
-            
-            # (Requires passing the raw token surfaces into sentence_context beforehand)
-            sentence_words = sentence_context.get('surface_words', [])
-            
-            # e.g., if "電話" is in the sentence, and the definition has "phone" or "telephone"
-            if '電話' in sentence_words and ('phone' in definitions.lower() or 'telephone' in definitions.lower()):
-                score += 50
-                
-            # e.g., if "時間" is in the sentence, and the definition has "time"
-            if '時間' in sentence_words and ('time' in definitions.lower() or 'accurate' in definitions.lower()):
-                score += 50
-                
-            # --- 3. Environmental Context Matching ---
-            if sentence_context.get('polarity') == 'negative':
-                if 'negative' in s_inf_str.lower():
-                    score += 15 # Perfect environmental match
+            # Environmental Context Matching
+            if sentence_polarity == 'negative':
+                if 'negative' in s_inf_str.lower(): score += 15
             else:
-                if 'negative' in s_inf_str.lower():
-                    score -= 15 # Penalize negative definitions in a positive sentence!
+                if 'negative' in s_inf_str.lower(): score -= 15
                     
-            # --- 4. Quality Control ---
-            if 'obs' in s_pos_str or 'arch' in s_pos_str or 'rare' in s_pos_str:
-                score -= 5 # Demote obsolete/archaic terms
+            # Quality Control
+            if 'obs' in s_pos_str or 'arch' in s_pos_str or 'rare' in s_pos_str: score -= 5
                 
-            # --- 5. Update Winner ---
-            if score > best_score:
-                best_score = score
-                # Clean up the output string, keeping context notes if they exist
-                best_def = f"[{s_inf}] {definitions}" if s_inf else definitions
+            formatted_sense = f"[{s_inf}] {sense_glosses}" if s_inf else sense_glosses
+            scored_senses.append((score, formatted_sense))
 
-        return best_def
+        # Sort the DB senses by score
+        scored_senses.sort(key=lambda x: x[0], reverse=True)
+        final_definitions = [sense[1] for sense in scored_senses]
+
+        # --- 3. FINAL COMPILATION ---
+        # If we found an idiom, inject it at the VERY FRONT of the list!
+        if injected_idiom:
+            if injected_idiom not in final_definitions:
+                final_definitions.insert(0, injected_idiom)
+
+        # Return the fully compiled string separated by " | "
+        return " | ".join(final_definitions)
 
     def get_kanji_details(self, word):
         # (Keep your existing get_kanji_details code exactly as is)
@@ -203,7 +225,7 @@ class BungoEngine:
                 if base in ['です', 'ます'] or 'ません' in token.surface():
                     sentence_context['politeness'] = 'polite'
 
-            # --- Pass 2 & 3: Definition and Rule Loop ---
+            # --- Pass 2: Definition and Rule Loop ---
             skip_count = 0
             for i, token in enumerate(tokens):
                 # If a previous rule absorbed this token, skip it entirely!
@@ -225,21 +247,22 @@ class BungoEngine:
                 definition = None
                 romaji = None
                 
-                # 1. Grammar Rules & Overrides
-                if base_form == 'ない' or base_form == 'ん':
+                # --- PRIORITY 1: SLANG & CONTRACTIONS (Must come first!) ---
+                slang_def = rule_engine.get_casual_contraction_explanation(token)
+                if slang_def:
+                    definition = slang_def
+                    romaji = self.get_romaji(word)
+                    
+                # --- PRIORITY 2: HARDCODED GRAMMAR ---
+                elif base_form in ['ない', 'ぬ', 'ん']:
                     definition = "Negative suffix / Does not exist"
                     romaji = "nai"
-                elif rule_engine.get_casual_contraction_explanation(token):
-                    definition = rule_engine.get_casual_contraction_explanation(token)
                 elif base_form in ['て', 'で'] and '助詞' in pos:
-                    # Unpack our new tuple
                     definition, skip = rule_engine.get_te_form_explanation(token, context_dict)
                     skip_count = skip 
-                    
                     if skip > 0:
-                        # Mathematically bundle the auxiliary verb to the particle for the UI
                         next_token = tokens[i+1]
-                        word += next_token.surface() # e.g., "て" + "いる" = "ている"
+                        word += next_token.surface() 
                         romaji = self.get_romaji(word)
                     else:
                         romaji = "te" if base_form == 'て' else "de"
@@ -250,16 +273,29 @@ class BungoEngine:
                 elif '助動詞' in pos:
                     definition = rule_engine.get_auxiliary_explanation(token, context_dict)
                     if not definition:
-                        definition = self.dict_service.get_contextual_definition(base_form, base_kana, pos, sentence_context)
+                        definition = self.dict_service.get_contextual_definition(base_form, base_kana, pos, context_dict)
                     romaji = self.get_romaji(word)
                 
                 elif word in rule_engine.punctuation_registry:
                     definition = rule_engine.punctuation_registry[word]
                     romaji = word
 
-                # 2. Smart Dictionary Lookup
+                # --- PRIORITY 3: SMART DICTIONARY LOOKUP ---
                 if not definition:
-                    definition = self.dict_service.get_contextual_definition(base_form, base_kana, pos, sentence_context)
+                    definition = self.dict_service.get_contextual_definition(base_form, base_kana, pos, context_dict)
+                    
+                    if not definition and re.fullmatch(r'[\u30A0-\u30FFー]+', word):
+                        if not definition or definition == "Definition not found.":
+                            definition = f"[Loanword] {self.get_romaji(word).capitalize()}"
+                            
+                    elif not definition or definition == "Definition not found.":
+                        override_lemma = rule_engine.verb_lemma_map.get(word)
+                        if override_lemma:
+                            # BUG FIX: Ensure context_dict is passed here too!
+                            definition = self.dict_service.get_contextual_definition(
+                                override_lemma, override_lemma, pos, context_dict
+                            )
+                            
                     if not definition:
                         definition = "Definition not found."
                         
@@ -305,4 +341,8 @@ T3 先生には、私からもう一度だけ電話をかけます。
 
 Casual Test:
 ごめん、お母さんのケーキ、全部食べちゃった！
+
+Final Boss Tests:
+最近、年をとってすぐ風邪を引いちゃうから、しっかり睡眠をとらなきゃ。
+Recently (Comma) Age/years (Target marker) To grow old (Conjunction) Immediately Cold (Target marker) To catch (a cold) [Regret/Completion] (Reason marker) (Comma) Properly / fully Sleep (Target marker) To get (sleep) [Obligation (Casual)] (Period)
 """

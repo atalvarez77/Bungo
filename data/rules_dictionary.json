@@ -1,0 +1,155 @@
+{
+  "punctuation_registry": {
+    "。": "Period: Marks the end of a sentence.",
+    "、": "Comma: Separates elements within a sentence.",
+    "・": "Middle Dot: Used to separate items in a list or compound words.",
+    "—": "Em Dash: Indicates a break in thought or a pause.",
+    "―": "Horizontal Bar: Similar to '—', used for emphasis or interruption.",
+    "?": "Question Mark: Indicates a question.",
+    "！": "Exclamation Mark: Indicates exclamation or strong emotion.",
+    "〜": "Tilde: Indicates a range or approximation.",
+    "…": "Ellipsis: Indicates an ellipsis, showing omission or trailing off.",
+    "「": "Opening Bracket: Used for quotations or emphasis.",
+    "」": "Closing Bracket: Used for quotations or emphasis.",
+    "『": "Opening Double Bracket: Used for quotes within quotes or titles.",
+    "』": "Closing Double Bracket: Used for quotes within quotes or titles."
+  },
+  "verb_lemma_map": {
+    "弾かさ": "弾く",
+    "書かす": "書く",
+    "行か": "行く",
+    "買わさ": "買う",
+    "待たさ": "待つ",
+    "持たさ": "持つ",
+    "泣かさ": "泣く",
+    "動かさ": "動く",
+    "遊ばさ": "遊ぶ",
+    "飛ばさ": "飛ぶ",
+    "読ま": "読む",
+    "飲ま": "飲む",
+    "させ": "する",
+    "見": "見る",
+    "来": "来る",
+    "食べさせ": "食べる"
+  },
+  "contraction_map": {
+    "ちゃう": "[Regret / Completion] Contraction of てしまう. (Note: In Kansai, can mean 'wrong').",
+    "じゃう": "[Regret / Completion (Casual)] Contraction of でしまう. Indicates a completed action.",
+    "ちまう": "[Regret / Completion (Rough)] Contraction of てしまう. Often used in rough speech.",
+    "とく": "[Preparatory Action (Casual)] Contraction of ておく. Action done in advance.",
+    "どく": "[Preparatory Action (Casual)] Contraction of でおく. Action done in advance.",
+    "といて": "[Preparatory Action (Request)] Contraction of ておいて. 'Do this in advance.'",
+    "てる": "[Continuous / State (Casual)] Contraction of ている. Indicates an ongoing action.",
+    "でる": "[Continuous / State (Casual)] Contraction of でいる. Indicates an ongoing action.",
+    "てく": "[Direction / Future (Casual)] Contraction of ていく. Action continuing into the future.",
+    "なきゃ": "[Obligation (Casual)] Contraction of なければ. Means 'must do'.",
+    "なくちゃ": "[Obligation (Casual)] Contraction of なくては. Means 'must do'.",
+    "きゃ": "[Obligation (Casual)] Contraction of ければ.",
+    "じゃん": "[Assertion (Casual)] Contraction of ではないか. Means 'isn't it?' or 'see?'.",
+    "かな": "[Conjecture / Doubt] Sentence ender meaning 'I wonder...' or 'Should I...'",
+    "っけ": "[Recall / Confirmation] Sentence ender used to recall a past memory ('Did you say...?', 'What was it again?').",
+    "だろ": "[Conjecture] Casual form of だろう. 'Probably' or 'Right?'.",
+    "かも": "[Conjecture] Contraction of かもしれない. 'Maybe' or 'Possibly'.",
+    "っす": "[Polite / Slang] Highly casual shortening of です. Used between peers.",
+    "すげー": "[Slang] Corruption of すごい (Amazing / Very).",
+    "めっちゃ": "[Slang] Contraction of めちゃくちゃ. Means 'Insanely' or 'Very'.",
+    "マジ": "[Slang] Seriously / For real / Very.",
+    "やばい": "[Slang] Dangerous / Amazing / Terrible. Highly contextual.",
+    "へん": "[Negative (Kansai Dialect)] Equivalent to standard 'nai' (ない).",
+    "ひん": "[Negative (Kansai Dialect)] Equivalent to standard 'nai' (ない).",
+    "やん": "[Confirmation (Kansai Dialect)] Equivalent to standard 'janai' or 'ne'.",
+    "ねん": "[Explanatory (Kansai Dialect)] Equivalent to standard 'n da' (んだ).",
+    "おおきに": "[Gratitude (Kansai Dialect)] Equivalent to 'arigatou'. Thank you.",
+    "せや": "[Agreement (Kansai Dialect)] Equivalent to standard 'sou da'. 'That is so'."
+  },
+  "collocation_map": {
+    "引く": {
+      "風邪": ["to catch (a cold)", "catch", "draw"],
+      "辞書": ["to look up (in a dictionary)", "look up", "consult"],
+      "辞典": ["to look up (in a dictionary)", "look up", "consult"],
+      "線": ["to draw (a line)", "draw", "line"],
+      "気": ["to attract (attention)", "attract", "draw"],
+      "血": ["to inherit (bloodline)", "inherit", "blood"]
+    },
+    "弾く": {
+      "ピアノ": ["to play (piano)", "play", "piano"],
+      "ギター": ["to play (guitar)", "play", "guitar"],
+      "ベース": ["to play (bass)", "play", "bass"]
+    },
+    "取る": {
+      "年": ["to grow old", "age", "older", "advance"],
+      "写真": ["to take (a photograph)", "take", "photograph", "picture"],
+      "睡眠": ["to get (sleep)", "get", "sleep"],
+      "連絡": ["to contact / get in touch", "contact", "touch"],
+      "責任": ["to take (responsibility)", "take", "assume", "bear"],
+      "メモ": ["to take (notes)", "take", "notes"],
+      "ノート": ["to take (notes)", "take", "notes"]
+    },
+    "とる": {
+      "年": ["to grow old", "age", "older", "advance"],
+      "睡眠": ["to get (sleep)", "get", "sleep"],
+      "連絡": ["to contact / get in touch", "contact", "touch"]
+    },
+    "かける": {
+      "眼鏡": ["to put on (glasses)", "wear", "put on"],
+      "メガネ": ["to put on (glasses)", "wear", "put on"],
+      "電話": ["to make (a phone call)", "call", "ring"],
+      "時間": ["to spend (time)", "spend", "take"],
+      "お金": ["to spend (money)", "spend", "cost"],
+      "迷惑": ["to cause (trouble/annoyance)", "cause", "trouble"],
+      "声": ["to call out (to someone)", "call out", "speak to"],
+      "鍵": ["to lock", "lock"],
+      "音楽": ["to play (music)", "play", "music"]
+    },
+    "する": {
+      "音": ["to be heard / to sound", "hear", "sound", "sensed", "noise"],
+      "匂い": ["to smell", "smell", "sensed"],
+      "におい": ["to smell", "smell", "sensed"],
+      "気": ["to feel like / have a hunch", "feel", "hunch"],
+      "話": ["to talk / converse", "talk", "speak"],
+      "約束": ["to promise", "promise"],
+      "お願い": ["to request / ask a favor", "request", "ask"],
+      "無理": ["to overdo it", "overdo", "impossible"]
+    },
+    "つく": {
+      "嘘": ["to tell (a lie)", "tell", "lie"],
+      "うそ": ["to tell (a lie)", "tell", "lie"],
+      "気": ["to notice / realize", "notice", "realize", "aware"],
+      "仕事": ["to get (a job)", "get", "take", "position"],
+      "職業": ["to get (a job)", "get", "take", "position"],
+      "席": ["to take (a seat)", "take", "sit"],
+      "ため息": ["to sigh", "sigh"]
+    },
+    "出す": {
+      "手": ["to interfere / get involved", "interfere", "reach out"],
+      "口": ["to interfere / interject", "interfere", "interrupt"],
+      "顔": ["to show up / make an appearance", "show up", "appearance"]
+    },
+    "立てる": {
+      "音": ["to make (a noise)", "make", "noise", "sound"],
+      "予定": ["to make (plans)", "make", "plan", "schedule"],
+      "腹": ["to get angry", "angry", "lose one's temper"]
+    },
+    "しっかり": {
+      "睡眠": ["properly / fully", "properly", "sufficiently", "fully"],
+      "休む": ["properly / fully", "properly", "sufficiently", "fully"],
+      "働く": ["hard / reliably", "reliably", "hard", "steadily"]
+    },
+    "年": {
+      "とっ": ["age / years", "age", "older", "advance"],
+      "とら": ["age / years", "age", "older", "advance"],
+      "取る": ["age / years", "age", "older", "advance"],
+      "とる": ["age / years", "age", "older", "advance"]
+    },
+    "気": {
+      "つく": ["mind / awareness (notice)", "mind", "awareness", "notice"],
+      "する": ["feeling / hunch", "feeling", "hunch"],
+      "なる": ["mind / concern (worry)", "mind", "concern", "worry"],
+      "入る": ["liking / favor (to like)", "liking", "favor", "please"]
+    },
+    "手": {
+      "出す": ["hands (interfere)", "hand", "interfere"],
+      "引く": ["hands (withdraw)", "hand", "withdraw"]
+    }
+  }
+}

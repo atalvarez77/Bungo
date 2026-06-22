@@ -1,6 +1,13 @@
+import json
+import os
+import sys
+
 class GrammarRuleEngine:
     def __init__(self):
-        # 1. The Logic Registry: Maps high-context particles to their functions
+        # 1. Load the Data Layer from JSON
+        self._load_json_rules()
+
+        # 2. Logic Registries (These stay in Python because they map to actual functions)
         self.logic_registry = {
             'は': self._handle_wa,
             'に': self._handle_ni,
@@ -18,24 +25,35 @@ class GrammarRuleEngine:
             'まで': self._handle_made
         }
 
-        # 2. The Phonetic Registry: Maps specific particles to romaji overrides
         self.romaji_overrides = {
             'は': self._romaji_wa,
             'へ': self._romaji_he
         }
 
-        self.punctuation_registry = {
-            '。': "Period: Marks the end of a sentence.",
-            '、': "Comma: Separates elements within a sentence.",
-            '・': "Middle Dot: Used to separate items in a list or compound words.",
-            '—': "Em Dash: Indicates a break in thought or a pause.",
-            '―': "Horizontal Bar: Similar to '—', used for emphasis or interruption.",
-            '?': "Question Mark: Indicates a question.",
-            '！': "Exclamation Mark: Indicates exclamation or strong emotion.",
-            '〜': "Tilde: Indicates a range or approximation.",
-            '…': "Ellipsis: Indicates an ellipsis, showing omission or trailing off."
+    def _load_json_rules(self):
+        """Safely loads static rule maps from the JSON file."""
+        if getattr(sys, 'frozen', False):
+            # If compiled by PyInstaller
+            base_path = sys._MEIPASS
+        else:
+            # If running in a local dev environment (assumes rules.py is in src/)
+            base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            
+        json_path = os.path.join(base_path, 'data', 'rules_dictionary.json')
 
-        }
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.punctuation_registry = data.get('punctuation_registry', {})
+                self.verb_lemma_map = data.get('verb_lemma_map', {})
+                self.contraction_map = data.get('contraction_map', {})
+                self.collocation_map = data.get('collocation_map', {})
+        except FileNotFoundError:
+            print(f"CRITICAL WARNING: {json_path} not found! Rule maps will be empty.")
+            self.punctuation_registry = {}
+            self.verb_lemma_map = {}
+            self.contraction_map = {}
+            self.collocation_map = {}
 
     # ==========================================
     # PUBLIC ROUTING METHODS (Called by Engine)
@@ -107,30 +125,15 @@ class GrammarRuleEngine:
         return "[Conjunction] 'And then' / Connects clauses or sequential actions.", 0
     
     def get_casual_contraction_explanation(self, token):
-        """
-        Intercepts conversational sound contractions (sound squishing) 
-        and maps them back to their formal grammatical meanings.
-        """
         base = token.dictionary_form()
+        surface = token.surface()
         
-        # 1. Regret / Completion (てしまう -> ちゃう)
-        if base in ['ちゃう', 'じゃう']:
-            return "[Regret / Completion (Casual)] Contraction of てしまう/でしまう. Indicates a completed action, often with regret."
+        # Check the base form first, then check the surface form
+        explanation = self.contraction_map.get(base)
+        if not explanation:
+            explanation = self.contraction_map.get(surface)
             
-        # 2. Preparatory Action (ておく -> とく)
-        elif base in ['とく', 'どく']:
-            return "[Preparatory Action (Casual)] Contraction of ておく/でおく. Action done in advance for future readiness."
-            
-        # 3. Continuous / State (ている -> てる)
-        # Note: Sudachi sometimes tags てる as its own word in very casual parsing modes
-        elif base in ['てる', 'でる']:
-            return "[Continuous / State (Casual)] Contraction of ている/でいる. Indicates an ongoing action or current state."
-
-        # 4. Obligation / "Must Do" (なくては -> なくちゃ)
-        elif base in ['なくちゃ', 'なきゃ']:
-            return "[Obligation (Casual)] Contraction of なくては / なければ. Means 'must do' or 'have to do'."
-            
-        return None
+        return explanation
     
     def get_romaji_override(self, token, context):
         """
@@ -341,7 +344,7 @@ class GrammarRuleEngine:
                 break   
 
         # 3. Default
-        return "Direct Object marker: Identifies the receiver of the action."
+        return "Target marker: Identifies the receiver of the action."
 
     def _handle_no(self, token, context):
         tokens, i = context['tokens'], context['index']
