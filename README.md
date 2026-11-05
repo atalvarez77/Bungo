@@ -1,4 +1,4 @@
-<img width="906" height="681" alt="image" src="https://github.com/user-attachments/assets/02197b4c-4b2d-431a-84c6-44c863646778" /># Bungo (文語) 🌸
+# Bungo (文語) 🌸
 
 Bungo is a local-first, deterministic, high-fidelity Japanese-to-English parsing and learning engine. 
 
